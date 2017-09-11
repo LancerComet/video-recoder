@@ -1,25 +1,26 @@
 class Gif {
   private width: number
   private height: number
+  private colors: number
 
   private fileHeader: ArrayBuffer
   private logicalDescriptor: ArrayBuffer
-  private globalColorTable: ArrayBuffer
+  private colorTable: ArrayBuffer
 
   /**
    * Create file header.
    *
-   * @protected
+   * @private
    * @memberof Gif
    */
-  protected createFileHeader () {
+  private createFileHeader () {
     const FILE_HEADER_LENGTH = 6
     const fileHeader = new ArrayBuffer(FILE_HEADER_LENGTH)
-    const fileHeaderView = new DataView(fileHeader)
+    const dataView = new DataView(fileHeader)
 
     // Write header data.
     const header = ['G', 'I', 'F', '8', '9', 'a']
-    header.forEach((item, index) => fileHeaderView.setUint8(index, charToCode(item)))
+    header.forEach((item, index) => dataView.setUint8(index, charToCode(item)))
 
     this.fileHeader = fileHeader
   }
@@ -27,10 +28,10 @@ class Gif {
   /**
    * Create Logical Screen Descriptor.
    *
-   * @protected
+   * @private
    * @memberof Gif
    */
-  protected createLogicalDescriptor () {
+  private createLogicalDescriptor () {
     /**
      * [
      *   width in 2 bytes
@@ -43,22 +44,22 @@ class Gif {
 
     const DESCRIPTOR_LENGTH = 7
     const descriptor = new ArrayBuffer(DESCRIPTOR_LENGTH)
-    const descriptorView = new DataView(descriptor)
+    const dataView = new DataView(descriptor)
 
     // Write size info.
     // Each width and height takes 2 bytes.
-    descriptorView.setUint16(this.width, 0)
-    descriptorView.setUint16(this.height, 2)
+    dataView.setUint16(this.width, 0)
+    dataView.setUint16(this.height, 2)
 
     // TODO: Fill correct data.
     // m, cr, s, pixel
-    descriptorView.setUint8(0, 4)
+    dataView.setUint8(0, 4)
 
     // Background index.
-    descriptorView.setUint8(0, 5)
+    dataView.setUint8(0, 5)
 
     // Pixel Aspect Radio.
-    descriptorView.setUint8(0, 6)
+    dataView.setUint8(0, 6)
 
     this.logicalDescriptor = descriptor
   }
@@ -66,11 +67,64 @@ class Gif {
   /**
    * Create global color table.
    *
-   * @protected
+   * @private
    * @memberof Gif
    */
-  protected createGlobalColorTable () {
+  private createColorTable () {
+    const colorTable = new ArrayBuffer(this.colors * 3)
+    const dataView = new DataView(colorTable)
+    const DEFAULT_COLOR = 0  // 0 - 255 each channel.
 
+    // Create color maps.
+    // Color map is the member in color table.
+    // Each color map takes 3 bytes.
+    for (let i = 0; i < this.colors; i += 3) {
+      dataView.setUint8(i, DEFAULT_COLOR)      // r.
+      dataView.setUint8(i + 1, DEFAULT_COLOR)  // g.
+      dataView.setUint8(i + 2, DEFAULT_COLOR)  // B.
+    }
+
+    this.colorTable = colorTable
+  }
+
+  /**
+   * Create image descriptor.
+   *
+   * @private
+   * @memberof Gif
+   */
+  private createImageDescriptor () {
+    /**
+     * [
+     *   0x2c               - 1 byte
+     *   x offset           - 2 bytes
+     *   y offset           - 2 bytes
+     *   width              - 2 bytes
+     *   height             - 2 bytes
+     *   m, i, s, r, pixel  - 1 byte
+     * ]
+     */
+    const imageDescriptor = new ArrayBuffer(10)
+    const dataView = new DataView(imageDescriptor)
+
+    // Descriptor starting flag.
+    // Fixed value: 44 (00101100).
+    dataView.setUint8(0, 44)
+
+    // X offset.
+    dataView.setUint16(1, 0)
+
+    // Y offset.
+    dataView.setUint16(3, 0)
+
+    // Width.
+    dataView.setUint16(5, this.width)
+
+    // Height.
+    dataView.setUint16(7, this.height)
+
+    // m, 1, s, r, pixel
+    dataView.setUint8(9, 1)
   }
 
   constructor (param: IGif) {
@@ -79,6 +133,8 @@ class Gif {
 
     this.createFileHeader()
     this.createLogicalDescriptor()
+    this.createColorTable()
+    this.createImageDescriptor()
   }
 }
 
@@ -104,4 +160,5 @@ function charToCode (char: string): number {
 interface IGif {
   width: number
   height: number
+  colors: number
 }
