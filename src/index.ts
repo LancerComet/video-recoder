@@ -1,5 +1,5 @@
-import { Ticker } from './libs/ticker'
-import { Recorder } from './libs/recorder'
+import { Recorder } from './core/recorder'
+import { Ticker } from './utils/ticker'
 
 const appVideo = <HTMLVideoElement> document.getElementById('app-video')
 
@@ -11,7 +11,10 @@ const stopRecordBtn = <HTMLButtonElement> document.getElementById('stop-record-b
 
 const RECORDING_FPS = 10
 
-const recorder = new Recorder(appCanvas)
+const recorder = new Recorder({
+  canvasElement: appCanvas,
+  fps: RECORDING_FPS
+})
 
 // Attach events.
 startRecordBtn.addEventListener('click', () => recorder.startRecord())
@@ -22,6 +25,6 @@ playVideoInCanvas()
 
 // Play video in canvas.
 function playVideoInCanvas () {
-  const ticker = new Ticker(24, () => context.drawImage(appVideo, 0, 0))
+  const ticker = new Ticker(60, () => context.drawImage(appVideo, 0, 0))
   ticker.start()
 }

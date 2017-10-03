@@ -10,11 +10,21 @@ class Ticker {
   private rafID: any
   private i: number
 
+  /**
+   * Run raf in target frame rates.
+   *
+   * @memberof Ticker
+   */
   start () {
     this.i = this.fpsInterval
     this.tick()
   }
 
+  /**
+   * Stop raf running process.
+   *
+   * @memberof Ticker
+   */
   stop () {
     cancelAnimationFrame(this.rafID)
   }
