@@ -22,14 +22,16 @@
 
 /* tslint:disable */
 
-var EOF = -1;
-var BITS = 12;
-var HSIZE = 5003; // 80% occupancy
-var masks = [0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F,
-             0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF,
-             0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF];
+const EOF = -1
+const BITS = 12
+const HSIZE = 5003 // 80% occupancy
+const masks = [
+  0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F,
+  0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF,
+  0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF
+]
 
-function LZWEncoder(width, height, pixels, colorDepth) {
+function LZWEncoder (width, height, pixels, colorDepth) {
   var initCodeSize = Math.max(2, colorDepth);
 
   var accum = new Uint8Array(256);

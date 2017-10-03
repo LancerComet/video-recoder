@@ -5,7 +5,7 @@ import { GIFEncoder } from '../gif/gif'
 import { download } from '../download'
 
 class Recorder {
-  private delay: number = 41
+  private delay: number = 150
   private inRecording: boolean = false
   private canvas: HTMLCanvasElement
   private context: CanvasRenderingContext2D

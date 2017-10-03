@@ -15,37 +15,6 @@ import { LZWEncoder } from './lzw-encoder'
 import { ByteArray } from './byte-array'
 import { isNumber } from '../../utils/is-number'
 
-class Gif {
-  private width: number
-  private height: number
-  private delay: number
-
-  private setDelay (milliseconds: number) {
-    this.delay = Math.round(1000 / milliseconds)
-  }
-
-  constructor (options: IGifOptions) {
-    if (
-      !isNumber(options.width) ||
-      !isNumber(options.height)
-    ) {
-      throw new TypeError('[Gif] Width and height must be provided.')
-    }
-
-    this.width = options.width
-    this.height = options.height
-
-    // Init fps.
-    isNumber(options.delay) && this.setDelay(options.delay)
-  }
-}
-
-interface IGifOptions {
-  width: number
-  height: number
-  delay?: number
-}
-
 function GIFEncoder (width, height) {
   // image size
   this.width = ~~width;
@@ -82,19 +51,23 @@ function GIFEncoder (width, height) {
 }
 
 GIFEncoder.prototype.emit = function() {
-  var self = this;
-  if (this.readStreams.length === 0) return;
+  if (this.readStreams.length === 0) {
+    return
+  }
+
   if (this.out.data.length) {
-    this.readStreams.forEach(function (rs) {
-      rs.push(new Buffer(self.out.data));
-    });
+    for (let i = 0, length = this.readStreams.length; i < length; i++) {
+      const readStream = this.readStreams[i]
+      readStream.push(new Buffer(this.out.data))
+    }
     this.out.data = [];
   }
 };
 
 GIFEncoder.prototype.end = function() {
-  if (this.readStreams.length === null) return;
-  this.emit();
+  if (!this.readStreams.length) {
+    return
+  }
   this.readStreams.forEach(function (rs) {
     rs.push(null);
   });
@@ -165,7 +138,23 @@ GIFEncoder.prototype.addFrame = function(imageData) {
     this.image = imageData;
   }
 
-  this.getImagePixels(); // convert to correct format if necessary
+  // Extracts ImageData to pixel byte array in BGR order.
+  var w = this.width;
+  var h = this.height;
+  this.pixels = new Uint8Array(w * h * 3);
+
+  var data = this.image;
+  var count = 0;
+
+  for (var i = 0; i < h; i++) {
+    for (var j = 0; j < w; j++) {
+      var b = (i * w * 4) + j * 4;
+      this.pixels[count++] = data[b];
+      this.pixels[count++] = data[b+1];
+      this.pixels[count++] = data[b+2];
+    }
+  }
+
   this.analyzePixels(); // build color table & map pixels
 
   if (this.firstFrame) {
@@ -183,7 +172,6 @@ GIFEncoder.prototype.addFrame = function(imageData) {
   this.writePixels(); // encode and write pixel data
 
   this.firstFrame = false;
-  this.emit();
 };
 
 /*
@@ -213,7 +201,6 @@ GIFEncoder.prototype.setQuality = function(quality) {
 GIFEncoder.prototype.start = function() {
   this.out.writeUTFBytes("GIF89a");
   this.started = true;
-  this.emit();
 };
 
 /*
@@ -286,27 +273,6 @@ GIFEncoder.prototype.findClosest = function(c) {
   return minpos;
 };
 
-/*
-  Extracts image pixels into byte array pixels
-  (removes alphachannel from canvas imagedata)
-*/
-GIFEncoder.prototype.getImagePixels = function() {
-  var w = this.width;
-  var h = this.height;
-  this.pixels = new Uint8Array(w * h * 3);
-
-  var data = this.image;
-  var count = 0;
-
-  for (var i = 0; i < h; i++) {
-    for (var j = 0; j < w; j++) {
-      var b = (i * w * 4) + j * 4;
-      this.pixels[count++] = data[b];
-      this.pixels[count++] = data[b+1];
-      this.pixels[count++] = data[b+2];
-    }
-  }
-};
 
 /*
   Writes Graphic Control Extension

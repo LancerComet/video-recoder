@@ -13,7 +13,7 @@ const RECORDING_FPS = 10
 
 const recorder = new Recorder({
   canvasElement: appCanvas,
-  fps: RECORDING_FPS
+  delay: RECORDING_FPS
 })
 
 // Attach events.
