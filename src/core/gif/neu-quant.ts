@@ -21,7 +21,7 @@
  * (JavaScript port 2012 by Johan Nordberg)
  */
 
-/* tslint:disable */
+ /* tslint:disable */
 
 var ncycles = 100; // number of learning cycles
 var netsize = 256; // number of colors used
@@ -63,13 +63,18 @@ var prime3 = 487;
 var prime4 = 503;
 var minpicturebytes = (3 * prime4);
 
+/*
+  Constructor: NeuQuant
 
-/**
- * Constructor: NeuQuant
- *
- * @param {any} pixels array of pixels in BGR order, [b, g, r, b, g, r, ...]
- * @param {any} samplefac sampling factor 1 to 30 where lower is better quality
- */
+  Arguments:
+
+  pixels - array of pixels in RGB format
+  samplefac - sampling factor 1 to 30 where lower is better quality
+
+  >
+  > pixels = [r, g, b, r, g, b, r, g, b, ..]
+  >
+*/
 function NeuQuant (pixels, samplefac) {
   var network; // int[netsize][4]
   var netindex; // for network lookup - really 256
@@ -84,7 +89,7 @@ function NeuQuant (pixels, samplefac) {
 
     sets up arrays
   */
-  function init () {
+  function init() {
     network = [];
     netindex = new Int32Array(256);
     bias = new Int32Array(netsize);
@@ -309,7 +314,7 @@ function NeuQuant (pixels, samplefac) {
 
     "Main Learning Loop"
   */
-  function learn () {
+  function learn() {
     var i;
 
     var lengthcount = pixels.length;
@@ -379,7 +384,7 @@ function NeuQuant (pixels, samplefac) {
     3. removes misconceptions
     4. builds colorindex
   */
-  function buildColormap () {
+  function buildColormap() {
     init();
     learn();
     unbiasnet();
@@ -398,7 +403,7 @@ function NeuQuant (pixels, samplefac) {
     > [r, g, b, r, g, b, r, g, b, ..]
     >
   */
-  function getColormap () {
+  function getColormap() {
     var map = [];
     var index = [];
 
