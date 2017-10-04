@@ -63,6 +63,16 @@ class Gif {
   private gifRawBytes: ByteArray = new ByteArray()
 
   /**
+   * Useless function.
+   *
+   * @private
+   * @memberof Gif
+   */
+  private emit () {
+    // I don't f@xking know why the browser becomes very laggy if I remove this function !
+  }
+
+  /**
    * Set delay between frame to frame.
    *
    * @private
@@ -127,7 +137,6 @@ class Gif {
    */
   private analyseColor () {
     const imageQuant = new NeuQuant(this.currentFramePixelsData, this.quality)
-    imageQuant.buildColormap()
     this.colorTable = imageQuant.getColormap()
 
     // Index pixels.
