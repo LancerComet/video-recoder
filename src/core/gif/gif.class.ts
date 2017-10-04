@@ -37,9 +37,6 @@ class Gif {
   /** Color table Will be global color table if first frame, otherwise local color table. */
   private colorTable: number[]
 
-  /** Active palette entries. */
-  private usedEntry: boolean[] = []
-
   /**
    * DisposalMethod Code, 0 for none dispose.
    * For more detail, check out this aritcle at section "Graphic Control Extension":
@@ -147,7 +144,6 @@ class Gif {
         this.currentFramePixelsData[j++] & 0xff
       )
 
-      this.usedEntry[index] = true
       this.indexedPixels[i] = index
     }
 
@@ -346,10 +342,6 @@ class Gif {
       this.disposalMethodCode = options.disposalMethodCode
     }
 
-    // Set colorDepth and colorTableSize.
-    this.colorDepth = 8
-    this.colorTableSize = 7
-
     // Write file head.
     this.writeString('GIF89a')
   }
@@ -422,9 +414,9 @@ class Gif {
    *
    * @memberof Gif
    */
-  finish (): number[] {
+  finish (): Uint8Array {
     this.writeByte(0x3B)
-    return this.gifRawBytes.data
+    return this.gifRawBytes.getBinaryData()
   }
 }
 
