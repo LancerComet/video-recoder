@@ -20,7 +20,7 @@
   Joe Orost (decvax!vax135!petsd!joe)
 */
 
-/* tslint:disable */
+import { ByteArray } from './byte-array'
 
 const EOF = -1
 const BITS = 12
@@ -31,25 +31,29 @@ const masks = [
   0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF
 ]
 
-function LZWEncoder (width, height, pixels, colorDepth) {
-  var initCodeSize = Math.max(2, colorDepth);
+class LZWEncoder {
+  private width: number
+  private height: number
+  private pixels: Uint8Array = null
 
-  var accum = new Uint8Array(256);
-  var htab = new Int32Array(HSIZE);
-  var codetab = new Int32Array(HSIZE);
+  private accum = new Uint8Array(256)
+  private htab = new Int32Array(HSIZE)
+  private codetab = new Int32Array(HSIZE)
 
-  var cur_accum, cur_bits = 0;
-  var a_count;
-  var free_ent = 0; // first unused entry
-  var maxcode;
+  private cur_accum = 0
+  private cur_bits = 0
 
-  let remaining
-  let n_bits
-  let curPixel
+  private initCodeSize: number
+  private remaining: number
+  private curPixel: number
+
+  private g_init_bits: number
+  private n_bits: number
+  private maxcode: number
 
   // block compression parameters -- after all codes are used up,
   // and compression rate changes, start over.
-  var clear_flg = false;
+  private clear_flg: boolean = false
 
   // Algorithm: use open addressing double hashing (no chaining) on the
   // prefix code / next character combination. We do a variant of Knuth's
@@ -62,158 +66,211 @@ function LZWEncoder (width, height, pixels, colorDepth) {
   // for the decompressor. Late addition: construct the table according to
   // file size for noticeable speed improvement on small files. Please direct
   // questions about this implementation to ames!jaw.
-  var g_init_bits, ClearCode, EOFCode;
+  private ClearCode: number
+  private EOFCode: number
 
-  // Add a character to the end of the current packet, and if it is 254
-  // characters, flush the packet to disk.
-  function char_out(c, outs) {
-    accum[a_count++] = c;
-    if (a_count >= 254) flush_char(outs);
-  }
+  private free_ent: number = 0
+  private a_count
 
-  // Clear out the hash table
-  // table clear for block compress
-  function cl_block(outs) {
-    cl_hash(HSIZE);
-    free_ent = ClearCode + 2;
-    clear_flg = true;
-    output(ClearCode, outs);
-  }
-
-  // Reset code table
-  function cl_hash(hsize) {
-    for (var i = 0; i < hsize; ++i) htab[i] = -1;
-  }
-
-  function compress(init_bits, outs) {
-    var fcode, c, i, ent, disp, hsize_reg, hshift;
+  private compress (init_bits: number, outs: ByteArray) {
+    let fcode, c, i, ent, disp, hsize_reg, hshift;
 
     // Set up the globals: g_init_bits - initial number of bits
-    g_init_bits = init_bits;
+    this.g_init_bits = init_bits;
 
     // Set up the necessary values
-    clear_flg = false;
-    n_bits = g_init_bits;
-    maxcode = MAXCODE(n_bits);
+    this.clear_flg = false
+    this.n_bits = this.g_init_bits
+    this.maxcode = MAXCODE(this.n_bits)
 
-    ClearCode = 1 << (init_bits - 1);
-    EOFCode = ClearCode + 1;
-    free_ent = ClearCode + 2;
+    this.ClearCode = 1 << (init_bits - 1);
+    this.EOFCode = this.ClearCode + 1;
+    this.free_ent = this.ClearCode + 2;
 
-    a_count = 0; // clear packet
+    this.a_count = 0; // clear packet
 
-    ent = nextPixel();
+    ent = this.nextPixel();
 
     hshift = 0;
     for (fcode = HSIZE; fcode < 65536; fcode *= 2) ++hshift;
     hshift = 8 - hshift; // set hash code range bound
     hsize_reg = HSIZE;
-    cl_hash(hsize_reg); // clear hash table
+    this.cl_hash(hsize_reg); // clear hash table
 
-    output(ClearCode, outs);
+    this.output(this.ClearCode, outs);
 
-    outer_loop: while ((c = nextPixel()) != EOF) {
+    outer_loop: while ((c = this.nextPixel()) != EOF) {
       fcode = (c << BITS) + ent;
       i = (c << hshift) ^ ent; // xor hashing
-      if (htab[i] === fcode) {
-        ent = codetab[i];
+      if (this.htab[i] === fcode) {
+        ent = this.codetab[i];
         continue;
-      } else if (htab[i] >= 0) { // non-empty slot
+      } else if (this.htab[i] >= 0) { // non-empty slot
         disp = hsize_reg - i; // secondary hash (after G. Knott)
         if (i === 0) disp = 1;
         do {
           if ((i -= disp) < 0) i += hsize_reg;
-          if (htab[i] === fcode) {
-            ent = codetab[i];
+          if (this.htab[i] === fcode) {
+            ent = this.codetab[i];
             continue outer_loop;
           }
-        } while (htab[i] >= 0);
+        } while (this.htab[i] >= 0);
       }
-      output(ent, outs);
+      this.output(ent, outs);
       ent = c;
-      if (free_ent < 1 << BITS) {
-        codetab[i] = free_ent++; // code -> hashtable
-        htab[i] = fcode;
+      if (this.free_ent < 1 << BITS) {
+        this.codetab[i] = this.free_ent++; // code -> hashtable
+        this.htab[i] = fcode;
       } else {
-        cl_block(outs);
+        this.cl_block(outs);
       }
     }
 
     // Put out the final code.
-    output(ent, outs);
-    output(EOFCode, outs);
+    this.output(ent, outs);
+    this.output(this.EOFCode, outs);
   }
 
-  function encode(outs) {
-    outs.writeByte(initCodeSize); // write "initial code size" byte
-    remaining = width * height; // reset navigation variables
-    curPixel = 0;
-    compress(initCodeSize + 1, outs); // compress and write the pixel data
-    outs.writeByte(0); // write block terminator
+  /**
+   * Return the next pixel from the image
+   *
+   * @private
+   * @returns
+   * @memberof LZWEncoder
+   */
+  private nextPixel () {
+    if (this.remaining === 0) {
+      return EOF
+    }
+    --this.remaining
+
+    const pix = this.pixels[this.curPixel++]
+    return pix & 0xff
   }
 
-  // Flush the packet to disk, and reset the accumulator
-  function flush_char(outs) {
-    if (a_count > 0) {
-      outs.writeByte(a_count);
-      outs.writeBytes(accum, 0, a_count);
-      a_count = 0;
+  /**
+   * Reset code table
+   *
+   * @private
+   * @param {any} hsize
+   * @memberof LZWEncoder
+   */
+  private cl_hash (hsize) {
+    for (var i = 0; i < hsize; ++i) {
+      this.htab[i] = -1
     }
   }
 
-  function MAXCODE(n_bits) {
-    return (1 << n_bits) - 1;
-  }
+  private output (code: number, outs: ByteArray) {
+    this.cur_accum &= masks[this.cur_bits]
 
-  // Return the next pixel from the image
-  function nextPixel() {
-    if (remaining === 0) return EOF;
-    --remaining;
-    var pix = pixels[curPixel++];
-    return pix & 0xff;
-  }
+    if (this.cur_bits > 0) {
+      this.cur_accum |= (code << this.cur_bits)
+    } else {
+      this.cur_accum = code
+    }
 
-  function output(code, outs) {
-    cur_accum &= masks[cur_bits];
+    this.cur_bits += this.n_bits
 
-    if (cur_bits > 0) cur_accum |= (code << cur_bits);
-    else cur_accum = code;
-
-    cur_bits += n_bits;
-
-    while (cur_bits >= 8) {
-      char_out((cur_accum & 0xff), outs);
-      cur_accum >>= 8;
-      cur_bits -= 8;
+    while (this.cur_bits >= 8) {
+      this.char_out((this.cur_accum & 0xff), outs)
+      this.cur_accum >>= 8
+      this.cur_bits -= 8
     }
 
     // If the next entry is going to be too big for the code size,
     // then increase it, if possible.
-    if (free_ent > maxcode || clear_flg) {
-      if (clear_flg) {
-        maxcode = MAXCODE(n_bits = g_init_bits);
-        clear_flg = false;
+    if (this.free_ent > this.maxcode || this.clear_flg) {
+      if (this.clear_flg) {
+        this.maxcode = MAXCODE(this.n_bits = this.g_init_bits)
+        this.clear_flg = false
       } else {
-        ++n_bits;
-        if (n_bits == BITS) maxcode = 1 << BITS;
-        else maxcode = MAXCODE(n_bits);
+        ++this.n_bits
+        if (this.n_bits == BITS) {
+          this.maxcode = 1 << BITS
+        } else {
+          this.maxcode = MAXCODE(this.n_bits)
+        }
       }
     }
 
-    if (code == EOFCode) {
+    if (code == this.EOFCode) {
       // At EOF, write the rest of the buffer.
-      while (cur_bits > 0) {
-        char_out((cur_accum & 0xff), outs);
-        cur_accum >>= 8;
-        cur_bits -= 8;
+      while (this.cur_bits > 0) {
+        this.char_out((this.cur_accum & 0xff), outs);
+        this.cur_accum >>= 8;
+        this.cur_bits -= 8;
       }
-      flush_char(outs);
+      this.flush_char(outs);
     }
   }
 
-  this.encode = encode;
+  /**
+   * Add a character to the end of the current packet, and if it is 254
+   * characters, flush the packet to disk.
+   *
+   * @private
+   * @param {number} c
+   * @param {ByteArray} outs
+   * @memberof LZWEncoder
+   */
+  private char_out (c: number, outs: ByteArray) {
+    this.accum[this.a_count++] = c;
+    if (this.a_count >= 254) {
+      this.flush_char(outs)
+    }
+  }
+
+  /**
+   * Flush the packet to disk, and reset the accumulator
+   *
+   * @private
+   * @param {ByteArray} outs
+   * @memberof LZWEncoder
+   */
+  private flush_char (outs: ByteArray) {
+    if (this.a_count > 0) {
+      outs.writeByte(this.a_count)
+      outs.writeBytes(this.accum, 0, this.a_count)
+      this.a_count = 0
+    }
+  }
+
+  /**
+   * Clear out the hash table
+   * table clear for block compress
+   *
+   * @private
+   * @param {any} outs
+   * @memberof LZWEncoder
+   */
+  private cl_block (outs) {
+    this.cl_hash(HSIZE)
+    this.free_ent = this.ClearCode + 2
+    this.clear_flg = true
+    this.output(this.ClearCode, outs)
+  }
+
+  constructor (width: number, height: number, pixels: Uint8Array, colorDepth: number) {
+    this.width = width
+    this.height = height
+    this.pixels = pixels
+    this.initCodeSize = Math.max(2, colorDepth)
+  }
+
+  encode (outs: ByteArray) {
+    outs.writeByte(this.initCodeSize) // write "initial code size" byte
+    this.remaining = this.width * this.height // reset navigation variables
+    this.curPixel = 0
+    this.compress(this.initCodeSize + 1, outs) // compress and write the pixel data
+    outs.writeByte(0) // write block terminator
+  }
 }
 
 export {
   LZWEncoder
+}
+
+function MAXCODE (n_bits: number) {
+  return (1 << n_bits) - 1
 }

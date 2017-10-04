@@ -20,7 +20,7 @@ class ByteArray {
     }
   }
 
-  writeBytes (arr: number[], offset?: number, length?: number) {
+  writeBytes (arr: number[] | Uint8Array | Uint8ClampedArray, offset?: number, length?: number) {
     for (let i = offset || 0, len = length || arr.length; i < len; i++) {
       this.writeByte(arr[i])
     }

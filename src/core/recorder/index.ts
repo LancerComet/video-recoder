@@ -1,8 +1,7 @@
 /// <reference path="./index.d.ts" />
 
 import { Ticker } from '../../utils/ticker'
-// import { GIFEncoder } from '../gif/gif'
-import { Gif } from '../gif/gif.class'
+import { Gif } from '../gif/gif'
 import { download } from '../download'
 
 class Recorder {
@@ -11,6 +10,7 @@ class Recorder {
   private canvas: HTMLCanvasElement
   private context: CanvasRenderingContext2D
   private gif: Gif
+  private recordedData: ImageData[] = []
 
   /**
    * Ticker object.
@@ -31,8 +31,14 @@ class Recorder {
   private recordExec () {
     if (!this.inRecording) { return }
 
-    // Append frame.
-    this.gif.addFrame(this.context)
+    // Capture image data and save it.
+    this.recordedData.push(this.context.getImageData(
+      0, 0, this.canvas.width, this.canvas.height
+    ))
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Recorder] Frame captured.')
+    }
   }
 
   /**
@@ -73,8 +79,18 @@ class Recorder {
   stopRecord () {
     this.ticker.stop()
     this.inRecording = false
-    const gifBinary = this.gif.finish()
+
+    const gif = this.gif
+
+    // Add frame and render gif.
+    for (let i = 0, length = this.recordedData.length; i < length; i++) {
+      gif.addFrame(this.recordedData[i])
+    }
+
+    const gifBinary = gif.finish()
     download(gifBinary, 'record.gif', 'image/gif')
+
+    this.recordedData = []
 
     if (process.env.NODE_ENV === 'development') {
       console.log('[Recoder] Stop recording.')
