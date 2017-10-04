@@ -1,12 +1,16 @@
 /// <reference path="./index.d.ts" />
 
 import { Ticker } from '../../utils/ticker'
+import { Gif } from '../gif/gif'
+import { download } from '../download'
 
 class Recorder {
-  private fps: number = 10
+  private delay: number = 150
   private inRecording: boolean = false
   private canvas: HTMLCanvasElement
   private context: CanvasRenderingContext2D
+  private gif: Gif
+  private recordedData: ImageData[] = []
 
   /**
    * Ticker object.
@@ -19,15 +23,6 @@ class Recorder {
   private ticker: Ticker
 
   /**
-   * Recorded data.
-   * Every single item in this array is the data of each frame.
-   *
-   * @type {TRecordedFramesData}
-   * @memberof Recorder
-   */
-  recordedData: TRecordedFramesData = []
-
-  /**
    * Record exec.
    *
    * @private
@@ -36,20 +31,14 @@ class Recorder {
   private recordExec () {
     if (!this.inRecording) { return }
 
-    // Get single frame image data.
-    const frameImageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height)
-    const bufferData = frameImageData.data
-    this.recordedData.push(bufferData)
-  }
+    // Capture image data and save it.
+    this.recordedData.push(this.context.getImageData(
+      0, 0, this.canvas.width, this.canvas.height
+    ))
 
-  /**
-   * Clear all recorded data.
-   *
-   * @private
-   * @memberof Recorder
-   */
-  private clearData () {
-    this.recordedData = []
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Recorder] Frame captured.')
+    }
   }
 
   /**
@@ -59,10 +48,18 @@ class Recorder {
    */
   startRecord () {
     if (!this.inRecording) {
-      this.clearData()
+      // Init gif.
+      const gif = new Gif({
+        width: this.canvas.width,
+        height: this.canvas.height,
+        repeat: 0,
+        quality: 10,
+        delay: this.delay
+      })
+      this.gif = gif
 
       // Create a new ticker to capture images in target frame rate.
-      const ticker = new Ticker(this.fps, () => this.recordExec())
+      const ticker = new Ticker(this.delay, () => this.recordExec())
       ticker.start()
       this.ticker = ticker
 
@@ -83,15 +80,27 @@ class Recorder {
     this.ticker.stop()
     this.inRecording = false
 
+    const gif = this.gif
+
+    // Add frame and render gif.
+    for (let i = 0, length = this.recordedData.length; i < length; i++) {
+      gif.addFrame(this.recordedData[i])
+    }
+
+    const gifBinary = gif.finish()
+    download(gifBinary, 'record.gif', 'image/gif')
+
+    this.recordedData = []
+
     if (process.env.NODE_ENV === 'development') {
       console.log('[Recoder] Stop recording.')
-      console.log(this.recordedData)
+      console.log(gifBinary)
     }
   }
 
   constructor (options: IRecoderOptions) {
-    if (typeof options.fps === 'number') {
-      this.fps = options.fps
+    if (typeof options.delay === 'number') {
+      this.delay = options.delay
     }
 
     if (Object.prototype.toString.call(options.canvasElement) === '[object HTMLCanvasElement]') {

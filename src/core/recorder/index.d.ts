@@ -5,17 +5,5 @@
  */
 interface IRecoderOptions {
   canvasElement: HTMLCanvasElement
-  fps: number
+  delay: number
 }
-
-/**
- * Recorded single frame pixel data.
- * Stands for the pixel data for each frame image.
- */
-type TRecordedSingleFrameData = Uint8ClampedArray
-
-/**
- * Recorded frames data.
- * The pixel data of every single frame is contained in this array.
- */
-type TRecordedFramesData = TRecordedSingleFrameData[]

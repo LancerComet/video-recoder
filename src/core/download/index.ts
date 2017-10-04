@@ -2,8 +2,8 @@
  * Function to download data to a file
  *
  * @param {any} data
- * @param {any} filename
- * @param {any} type
+ * @param {string} filename
+ * @param {string} type
  */
 function download (data: any, filename: string, type: string) {
   const file = new Blob([data], { type })
