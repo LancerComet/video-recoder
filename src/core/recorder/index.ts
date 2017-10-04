@@ -1,7 +1,8 @@
 /// <reference path="./index.d.ts" />
 
 import { Ticker } from '../../utils/ticker'
-import { GIFEncoder } from '../gif/gif'
+// import { GIFEncoder } from '../gif/gif'
+import { Gif } from '../gif/gif.class'
 import { download } from '../download'
 
 class Recorder {
@@ -9,7 +10,7 @@ class Recorder {
   private inRecording: boolean = false
   private canvas: HTMLCanvasElement
   private context: CanvasRenderingContext2D
-  private gif: any
+  private gif: Gif
 
   /**
    * Ticker object.
@@ -42,11 +43,13 @@ class Recorder {
   startRecord () {
     if (!this.inRecording) {
       // Init gif.
-      const gif = new GIFEncoder(this.canvas.width, this.canvas.height)
-      gif.start()
-      gif.setRepeat(0)
-      gif.setQuality(10)
-      gif.setDelay(this.delay)
+      const gif = new Gif({
+        width: this.canvas.width,
+        height: this.canvas.height,
+        repeat: 0,
+        quality: 10,
+        delay: this.delay
+      })
       this.gif = gif
 
       // Create a new ticker to capture images in target frame rate.
@@ -69,15 +72,13 @@ class Recorder {
    */
   stopRecord () {
     this.ticker.stop()
-    this.gif.finish()
     this.inRecording = false
-
-    const result = this.gif.out.getBinaryData()
-    download(result, 'record.gif', 'image/gif')
+    const gifBinary = this.gif.finish()
+    download(gifBinary, 'record.gif', 'image/gif')
 
     if (process.env.NODE_ENV === 'development') {
       console.log('[Recoder] Stop recording.')
-      console.log(result)
+      console.log(gifBinary)
     }
   }
 

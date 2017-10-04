@@ -48,10 +48,10 @@ class Gif {
   private disposalMethodCode: number = 0
 
   /** Color depth. Always be 8. */
-  private get colorDepth () { return 8 }
+  private colorDepth: number = 8
 
   /** Color table size. Always be 7. */
-  private get colorTableSize () { return 7 }
+  private colorTableSize: number = 7
 
   /** Transparent color. */
   private transparentColor: any = null
@@ -129,14 +129,14 @@ class Gif {
    * @memberof Gif
    */
   private analyseColor () {
-    const length = this.currentFramePixelsData.length
-    const pixelCount = length / 3  // 3 bytes represent one pixel.
-
-    this.indexedPixels = new Uint8Array(pixelCount)
-
     const imageQuant = new NeuQuant(this.currentFramePixelsData, this.quality)
     imageQuant.buildColormap()
     this.colorTable = imageQuant.getColormap()
+
+    // Index pixels.
+    // Pixel Count. 3 bytes represent one pixel.
+    const pixelCount = this.currentFramePixelsData.length / 3
+    this.indexedPixels = new Uint8Array(pixelCount)
 
     // Map image pixels to new palette.
     let j = 0
@@ -174,7 +174,7 @@ class Gif {
     // http://giflib.sourceforge.net/whatsinagif/bits_and_bytes.html
     this.writeByte(
       0x80 |               // 1: Global color table using flag. (0 is no global color table, 1 is used.)
-      this.colorDepth |    // 2 - 4: Color resulotion.
+      0x70 |               // 2 - 4: Color resulotion.
       0x00 |               // 5: Global color table sort flag: If the values is 1, then the colors in the
                            //    global color table are sorted in order of "decreasing importance,"
                            //    which typically means "decreasing frequency" in the image.
@@ -217,7 +217,7 @@ class Gif {
   private writeApplicationExtension () {
     this.writeByte(0x21)  // 1: GIF Extension Code.
     this.writeByte(0xFF)  // 2: Application Extension Label, always be 255.
-    this.writeByte(0x0B)  // 3: Length of Application Block, always be 11.
+    this.writeByte(11)  // 3: Length of Application Block, always be 11.
     this.writeString('NETSCAPE2.0')  // 4 - 14: String "NETSCAPE2.0".
     this.writeByte(3)  // 15: Length of Data Sub-Block, alaways be 3.
     this.writeByte(1)  // 16: Loop block ID, always be 1.
@@ -233,7 +233,7 @@ class Gif {
    * @memberof Gif
    */
   private writeGraphicsControlExtension () {
-    this.writeByte(21)    // 1: Extension Introducer. Always be 21.
+    this.writeByte(0x21)    // 1: Extension Introducer. Always be 0x21.
     this.writeByte(0xF9)  // 2: Graphics Control Label. Always be F9.
     this.writeByte(4)     // 3: Byte size, this extension is a 4-byte extension.
 
@@ -251,7 +251,7 @@ class Gif {
       disposalMethodsCode = this.disposalMethodCode & 7
     }
 
-    disposalMethodsCode << 2
+    disposalMethodsCode <<= 2
 
     // Fill Packet fields.
     this.writeByte(
@@ -308,7 +308,7 @@ class Gif {
    * @memberof Gif
    */
   private writeImagePixels () {
-    const encoder = new LZWEncoder(this.width, this.height, this.currentFramePixelsData, this.colorDepth)
+    const encoder = new LZWEncoder(this.width, this.height, this.indexedPixels, this.colorDepth)
     encoder.encode(this.gifRawBytes)
   }
 
@@ -346,6 +346,10 @@ class Gif {
       this.disposalMethodCode = options.disposalMethodCode
     }
 
+    // Set colorDepth and colorTableSize.
+    this.colorDepth = 8
+    this.colorTableSize = 7
+
     // Write file head.
     this.writeString('GIF89a')
   }
@@ -367,12 +371,13 @@ class Gif {
       imageData = <ImageData> data
     }
 
+    const imageDataInBytes = imageData.data
+
     // Extracts ImageData to pixel byte array in BGR order.
     const width = this.width
     const height = this.height
     this.currentFramePixelsData = new Uint8Array(width * height * 3)
 
-    const imageDataInBytes = imageData.data
     let count = 0
     for (let i = 0; i < height; i++) {
       for (let j = 0; j < width; j++) {
@@ -417,9 +422,14 @@ class Gif {
    *
    * @memberof Gif
    */
-  finish () {
+  finish (): number[] {
     this.writeByte(0x3B)
+    return this.gifRawBytes.data
   }
+}
+
+export {
+  Gif
 }
 
 /**

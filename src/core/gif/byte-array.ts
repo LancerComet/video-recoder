@@ -7,8 +7,7 @@ class ByteArray {
   data: number[] = []
 
   getBinaryData () {
-    const result = new Uint8Array(this.data)
-    return result
+    return new Uint8Array(this.data)
   }
 
   writeByte (value) {
