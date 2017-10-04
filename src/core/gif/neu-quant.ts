@@ -23,13 +23,13 @@
 
  /* tslint:disable */
 
-var ncycles = 100; // number of learning cycles
-var netsize = 256; // number of colors used
-var maxnetpos = netsize - 1;
+const ncycles = 100; // number of learning cycles
+const netsize = 256; // number of colors used
+const maxnetpos = netsize - 1;
 
 // defs for freq and bias
-var netbiasshift = 4; // bias for colour values
-var intbiasshift = 16; // bias for fractions
+const netbiasshift = 4; // bias for colour values
+const intbiasshift = 16; // bias for fractions
 var intbias = (1 << intbiasshift);
 var gammashift = 10;
 var gamma = (1 << gammashift);

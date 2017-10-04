@@ -21,10 +21,10 @@ function GIFEncoder (width, height) {
   this.height = ~~height;
 
   // transparent color if given
-  this.transparent = null;
+  this.transparentColor = null;
 
   // transparent index in color table
-  this.transIndex = 0;
+  this.transparentColorIndex = 0;
 
   // -1 = no repeat, 0 = forever. anything else is repeat count
   this.repeat = -1;
@@ -38,16 +38,14 @@ function GIFEncoder (width, height) {
   this.colorDepth = null; // number of bit planes
   this.colorTab = null; // RGB palette
   this.usedEntry = new Array(); // active palette entries
-  this.palSize = 7; // color table size (bits-1)
+  this.colorTableSize = 7; // color table size (bits-1)
   this.dispose = -1; // disposal code (-1 = use default)
   this.firstFrame = true;
   this.sample = 10; // default sample interval for quantizer
 
-  this.started = false; // started encoding
-
   this.readStreams = [];
 
-  this.out = new ByteArray();
+  this.gifRawBytes = new ByteArray();
 }
 
 GIFEncoder.prototype.emit = function() {
@@ -55,12 +53,12 @@ GIFEncoder.prototype.emit = function() {
     return
   }
 
-  if (this.out.data.length) {
+  if (this.gifRawBytes.data.length) {
     for (let i = 0, length = this.readStreams.length; i < length; i++) {
       const readStream = this.readStreams[i]
-      readStream.push(new Buffer(this.out.data))
+      readStream.push(new Buffer(this.gifRawBytes.data))
     }
-    this.out.data = [];
+    this.gifRawBytes.data = [];
   }
 };
 
@@ -122,7 +120,7 @@ GIFEncoder.prototype.setRepeat = function(repeat) {
   indicate no transparent color.
 */
 GIFEncoder.prototype.setTransparent = function(color) {
-  this.transparent = color;
+  this.transparentColor = color;
 };
 
 /*
@@ -179,7 +177,7 @@ GIFEncoder.prototype.addFrame = function(imageData) {
   the GIF stream will not be valid.
 */
 GIFEncoder.prototype.finish = function() {
-  this.out.writeByte(0x3b); // gif trailer
+  this.gifRawBytes.writeByte(0x3b); // gif trailer
   this.end();
 };
 
@@ -199,8 +197,7 @@ GIFEncoder.prototype.setQuality = function(quality) {
   Writes GIF file header
 */
 GIFEncoder.prototype.start = function() {
-  this.out.writeUTFBytes("GIF89a");
-  this.started = true;
+  this.gifRawBytes.writeUTFBytes("GIF89a");
 };
 
 /*
@@ -230,16 +227,16 @@ GIFEncoder.prototype.analyzePixels = function() {
 
   this.pixels = null;
   this.colorDepth = 8;
-  this.palSize = 7;
+  this.colorTableSize = 7;
 
   // get closest match to transparent color if specified
-  if (this.transparent !== null) {
-    this.transIndex = this.findClosest(this.transparent);
+  if (this.transparentColor !== null) {
+    this.transparentColorIndex = this.findClosest(this.transparentColor);
 
     // ensure that pixels with full transparency in the RGBA image are using the selected transparent color index in the indexed image.
     for (var pixelIndex = 0; pixelIndex < nPix; pixelIndex++) {
       if (this.image[pixelIndex * 4 + 3] == 0) {
-        this.indexedPixels[pixelIndex] = this.transIndex;
+        this.indexedPixels[pixelIndex] = this.transparentColorIndex;
       }
     }
   }
@@ -278,12 +275,12 @@ GIFEncoder.prototype.findClosest = function(c) {
   Writes Graphic Control Extension
 */
 GIFEncoder.prototype.writeGraphicCtrlExt = function() {
-  this.out.writeByte(0x21); // extension introducer
-  this.out.writeByte(0xf9); // GCE label
-  this.out.writeByte(4); // data block size
+  this.gifRawBytes.writeByte(0x21); // extension introducer
+  this.gifRawBytes.writeByte(0xf9); // GCE label
+  this.gifRawBytes.writeByte(4); // data block size
 
   var transp, disp;
-  if (this.transparent === null) {
+  if (this.transparentColor === null) {
     transp = 0;
     disp = 0; // dispose = no action
   } else {
@@ -297,7 +294,7 @@ GIFEncoder.prototype.writeGraphicCtrlExt = function() {
   disp <<= 2;
 
   // packed fields
-  this.out.writeByte(
+  this.gifRawBytes.writeByte(
     0 | // 1:3 reserved
     disp | // 4:6 disposal
     0 | // 7 user input - 0 = none
@@ -305,15 +302,15 @@ GIFEncoder.prototype.writeGraphicCtrlExt = function() {
   );
 
   this.writeShort(this.delay); // delay x 1/100 sec
-  this.out.writeByte(this.transIndex); // transparent color index
-  this.out.writeByte(0); // block terminator
+  this.gifRawBytes.writeByte(this.transparentColorIndex); // transparent color index
+  this.gifRawBytes.writeByte(0); // block terminator
 };
 
 /*
   Writes Image Descriptor
 */
 GIFEncoder.prototype.writeImageDesc = function() {
-  this.out.writeByte(0x2c); // image separator
+  this.gifRawBytes.writeByte(0x2c); // image separator
   this.writeShort(0); // image position x,y = 0,0
   this.writeShort(0);
   this.writeShort(this.width); // image size
@@ -322,15 +319,15 @@ GIFEncoder.prototype.writeImageDesc = function() {
   // packed fields
   if (this.firstFrame) {
     // no LCT - GCT is used for first (or only) frame
-    this.out.writeByte(0);
+    this.gifRawBytes.writeByte(0);
   } else {
     // specify normal LCT
-    this.out.writeByte(
+    this.gifRawBytes.writeByte(
       0x80 | // 1 local color table 1=yes
       0 | // 2 interlace - 0=no
       0 | // 3 sorted - 0=no
       0 | // 4-5 reserved
-      this.palSize // 6-8 size of color table
+      this.colorTableSize // 6-8 size of color table
     );
   }
 };
@@ -344,44 +341,44 @@ GIFEncoder.prototype.writeLSD = function() {
   this.writeShort(this.height);
 
   // packed fields
-  this.out.writeByte(
+  this.gifRawBytes.writeByte(
     0x80 | // 1 : global color table flag = 1 (gct used)
     0x70 | // 2-4 : color resolution = 7
     0x00 | // 5 : gct sort flag = 0
-    this.palSize // 6-8 : gct size
+    this.colorTableSize // 6-8 : gct size
   );
 
-  this.out.writeByte(0); // background color index
-  this.out.writeByte(0); // pixel aspect ratio - assume 1:1
+  this.gifRawBytes.writeByte(0); // background color index
+  this.gifRawBytes.writeByte(0); // pixel aspect ratio - assume 1:1
 };
 
 /*
   Writes Netscape application extension to define repeat count.
 */
 GIFEncoder.prototype.writeNetscapeExt = function() {
-  this.out.writeByte(0x21); // extension introducer
-  this.out.writeByte(0xff); // app extension label
-  this.out.writeByte(11); // block size
-  this.out.writeUTFBytes('NETSCAPE2.0'); // app id + auth code
-  this.out.writeByte(3); // sub-block size
-  this.out.writeByte(1); // loop sub-block id
+  this.gifRawBytes.writeByte(0x21); // extension introducer
+  this.gifRawBytes.writeByte(0xff); // app extension label
+  this.gifRawBytes.writeByte(11); // block size
+  this.gifRawBytes.writeUTFBytes('NETSCAPE2.0'); // app id + auth code
+  this.gifRawBytes.writeByte(3); // sub-block size
+  this.gifRawBytes.writeByte(1); // loop sub-block id
   this.writeShort(this.repeat); // loop count (extra iterations, 0=repeat forever)
-  this.out.writeByte(0); // block terminator
+  this.gifRawBytes.writeByte(0); // block terminator
 };
 
 /*
   Writes color table
 */
 GIFEncoder.prototype.writePalette = function() {
-  this.out.writeBytes(this.colorTab);
+  this.gifRawBytes.writeBytes(this.colorTab);
   var n = (3 * 256) - this.colorTab.length;
   for (var i = 0; i < n; i++)
-    this.out.writeByte(0);
+    this.gifRawBytes.writeByte(0);
 };
 
 GIFEncoder.prototype.writeShort = function(pValue) {
-  this.out.writeByte(pValue & 0xFF);
-  this.out.writeByte((pValue >> 8) & 0xFF);
+  this.gifRawBytes.writeByte(pValue & 0xFF);
+  this.gifRawBytes.writeByte((pValue >> 8) & 0xFF);
 };
 
 /*
@@ -389,7 +386,7 @@ GIFEncoder.prototype.writeShort = function(pValue) {
 */
 GIFEncoder.prototype.writePixels = function() {
   var enc = new LZWEncoder(this.width, this.height, this.indexedPixels, this.colorDepth);
-  enc.encode(this.out);
+  enc.encode(this.gifRawBytes);
 };
 
 export {
