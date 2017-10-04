@@ -1,5 +1,6 @@
 import { isNumber } from '../../utils/is-number'
 import { NeuQuant } from './neu-quant'
+import { LZWEncoder } from './lzw-encoder'
 import { ByteArray } from './byte-array'
 
 /**
@@ -300,6 +301,17 @@ class Gif {
     }
   }
 
+  /**
+   * Write image pixels data into GIF raw bytes data.
+   *
+   * @private
+   * @memberof Gif
+   */
+  private writeImagePixels () {
+    const encoder = new LZWEncoder(this.width, this.height, this.currentFramePixelsData, this.colorDepth)
+    encoder.encode(this.gifRawBytes)
+  }
+
   constructor (options: IGifOptions) {
     if (
       !isNumber(options.width) ||
@@ -392,12 +404,21 @@ class Gif {
     this.writeImageDescriptor()
 
     if (!this.isFirstFrame) {
-      // TODO: Write local color table.
+      this.writePalette()
     }
 
-    // TODO: write pixels data.
-
+    this.writeImagePixels()  // Write image pixels data that following image descriptor.
     this.isFirstFrame = false
+  }
+
+  /**
+   * Frame adding finished.
+   * Append file trailer to seal raw data.
+   *
+   * @memberof Gif
+   */
+  finish () {
+    this.writeByte(0x3B)
   }
 }
 
