@@ -23,6 +23,42 @@ class Recorder {
   private ticker: Ticker
 
   /**
+   * Event handlers.
+   *
+   * @private
+   * @type {{[eventName: string]: Function[]}}
+   * @memberof Recorder
+   */
+  private eventHandlers: {[eventName: string]: Function[]} = {}
+
+  /**
+   * Emit target event.
+   *
+   * @private
+   * @param {TRecorderEventType} eventName
+   * @memberof Recorder
+   */
+  private emitEvent (eventName: TRecorderEventType) {
+    this.eventHandlers[eventName].forEach(callback => callback())
+  }
+
+  /**
+   * Register callbacks.
+   *
+   * @param {TRecorderEventType} eventName
+   * @param {Function} callback
+   * @memberof Recorder
+   */
+  on (eventName: TRecorderEventType, callback: Function) {
+    if (typeof callback === 'function') {
+      if (!this.eventHandlers[eventName]) {
+        this.eventHandlers[eventName] = []
+      }
+      this.eventHandlers[eventName].push(callback)
+    }
+  }
+
+  /**
    * Record exec.
    *
    * @private
@@ -42,12 +78,30 @@ class Recorder {
   }
 
   /**
+   * Render gif.
+   *
+   * @private
+   * @memberof Recorder
+   */
+  private async renderExec () {
+    // Add frame and render gif.
+    for (let i = 0, length = this.recordedData.length; i < length; i++) {
+      await this.gif.addFrame(this.recordedData[i])
+    }
+
+    this.gif.finish()
+    this.emitEvent('encordingFinished')
+  }
+
+  /**
    * Start to record graphs.
    *
    * @memberof Recorder
    */
   startRecord () {
     if (!this.inRecording) {
+      this.recordedData = []
+
       // Init gif.
       const gif = new Gif({
         width: this.canvas.width,
@@ -76,26 +130,24 @@ class Recorder {
    *
    * @memberof Recorder
    */
-  async stopRecord () {
-    this.ticker.stop()
-    this.inRecording = false
-
-    const gif = this.gif
-
-    // Add frame and render gif.
-    for (let i = 0, length = this.recordedData.length; i < length; i++) {
-      await gif.addFrame(this.recordedData[i])
-    }
-
-    const gifBinary = gif.finish()
-    download(gifBinary, 'record.gif', 'image/gif')
-
-    this.recordedData = []
-
+  stopRecord () {
     if (process.env.NODE_ENV === 'development') {
       console.log('[Recoder] Stop recording.')
-      console.log(gifBinary)
     }
+
+    this.ticker.stop()
+    this.inRecording = false
+    this.renderExec()
+  }
+
+  /**
+   * Download gif file.
+   *
+   * @memberof Recorder
+   */
+  downloadGif () {
+    const gifBinary = this.gif.getBinaryData()
+    download(gifBinary, 'record.gif', 'image/gif')
   }
 
   constructor (options: IRecoderOptions) {
@@ -115,3 +167,4 @@ export {
   Recorder
 }
 
+type TRecorderEventType = 'encordingFinished'

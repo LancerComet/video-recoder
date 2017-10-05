@@ -15,15 +15,21 @@ html
         link(href="#{css}", rel="stylesheet")
 
   body
-    div
+    div(style="position: relative")
       h2 This is a canvas.
       canvas(id="app-canvas" width="853" height="480" style="background-color: #000")
 
     div
-      h4 Video playback is transferred in canvas.
+      h4 Video playback is transferred to canvas.
+
       div
         button#start-record-btn Start Record
         button#stop-record-btn Stop Record
+
+      div#recording-hint(style="display: none") Recording...
+      div#encoding-hint(style="display: none")
+        progress
+        span Encoding, please wait ...
 
     video#app-video(src="/demo.mp4" controls="controls" style="display: none" autoplay="autoplay" loop="loop")
 

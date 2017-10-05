@@ -1,8 +1,8 @@
 import { isNumber } from '../../utils/is-number'
 import { ByteArray } from './byte-array'
 
-import * as LZWEncoderWorker from 'worker-loader!./lzw-encoder.worker'
-import * as NeuQuantWorker from 'worker-loader!./neu-quant.worker'
+import * as LZWEncoderWorker from 'worker-loader?inline!./lzw-encoder.worker'
+import * as NeuQuantWorker from 'worker-loader?inline!./neu-quant.worker'
 
 /**
  * Gif class definition.
@@ -139,7 +139,7 @@ class Gif {
    * @private
    * @memberof Gif
    */
-  private analyseColor () {
+  private analyseColor (): Promise<void> {
     return new Promise((resolve, reject) => {
       // Pixel count.
       const pixelCount = this.currentFramePixelsData.length / 3
@@ -150,8 +150,7 @@ class Gif {
       worker.postMessage({
         pixels: this.currentFramePixelsData,
         quality: this.quality,
-        pixelCount,
-        currentFramePixelsData: this.currentFramePixelsData
+        pixelCount
       })
 
       worker.addEventListener('message', event => {
@@ -326,7 +325,7 @@ class Gif {
    * @private
    * @memberof Gif
    */
-  private writeImagePixels () {
+  private writeImagePixels (): Promise<void> {
     return new Promise((resolve, reject) => {
       const worker: Worker = new LZWEncoderWorker()
 
@@ -458,8 +457,17 @@ class Gif {
    *
    * @memberof Gif
    */
-  finish (): Uint8Array {
+  finish () {
     this.writeByte(0x3B)
+  }
+
+  /**
+   * Get gif binary data.
+   *
+   * @returns {Uint8Array}
+   * @memberof Gif
+   */
+  getBinaryData (): Uint8Array {
     return this.gifRawBytes.getBinaryData()
   }
 }
