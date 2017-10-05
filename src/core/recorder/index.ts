@@ -76,7 +76,7 @@ class Recorder {
    *
    * @memberof Recorder
    */
-  stopRecord () {
+  async stopRecord () {
     this.ticker.stop()
     this.inRecording = false
 
@@ -84,7 +84,7 @@ class Recorder {
 
     // Add frame and render gif.
     for (let i = 0, length = this.recordedData.length; i < length; i++) {
-      gif.addFrame(this.recordedData[i])
+      await gif.addFrame(this.recordedData[i])
     }
 
     const gifBinary = gif.finish()

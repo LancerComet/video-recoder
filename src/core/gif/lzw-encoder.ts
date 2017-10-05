@@ -265,6 +265,23 @@ class LZWEncoder {
     this.compress(this.initCodeSize + 1, outs) // compress and write the pixel data
     outs.writeByte(0) // write block terminator
   }
+
+  /**
+   * Same method as encode, but in worker enviroument.
+   *
+   * @param {number[]} gifRawBytes
+   * @memberof LZWEncoder
+   */
+  encodeInWorker (gifRawBytes: number[]): number[] {
+    const byteArray = new ByteArray()
+    byteArray.data = gifRawBytes
+    byteArray.writeByte(this.initCodeSize)
+    this.remaining = this.width * this.height
+    this.curPixel = 0
+    this.compress(this.initCodeSize + 1, byteArray)
+    byteArray.writeByte(0)
+    return byteArray.data
+  }
 }
 
 export {

@@ -25,6 +25,6 @@ playVideoInCanvas()
 
 // Play video in canvas.
 function playVideoInCanvas () {
-  const ticker = new Ticker(60, () => context.drawImage(appVideo, 0, 0))
+  const ticker = new Ticker(60, () => context.drawImage(appVideo, 0, 0, appCanvas.width, appCanvas.height))
   ticker.start()
 }
