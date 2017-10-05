@@ -1,7 +1,8 @@
 import { isNumber } from '../../utils/is-number'
-import { NeuQuant } from './neu-quant'
-import { LZWEncoder } from './lzw-encoder'
 import { ByteArray } from './byte-array'
+
+import * as LZWEncoderWorker from 'worker-loader?inline!./lzw-encoder.worker'
+import * as NeuQuantWorker from 'worker-loader?inline!./neu-quant.worker'
 
 /**
  * Gif class definition.
@@ -61,6 +62,9 @@ class Gif {
 
   /** Gif Output. */
   private gifRawBytes: ByteArray = new ByteArray()
+
+  /** Whether can add a new frame. */
+  private canAddNewFrame: boolean = true
 
   /**
    * Useless function.
@@ -135,31 +139,40 @@ class Gif {
    * @private
    * @memberof Gif
    */
-  private analyseColor () {
-    const imageQuant = new NeuQuant(this.currentFramePixelsData, this.quality)
-    this.colorTable = imageQuant.getColormap()
+  private analyseColor (): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Pixel count.
+      const pixelCount = this.currentFramePixelsData.length / 3
 
-    // Index pixels.
-    // Pixel Count. 3 bytes represent one pixel.
-    const pixelCount = this.currentFramePixelsData.length / 3
-    this.indexedPixels = new Uint8Array(pixelCount)
+      // Use worker to create color table.
+      const worker: Worker = new NeuQuantWorker()
 
-    // Map image pixels to new palette.
-    let j = 0
-    for (let i = 0; i < pixelCount; i++) {
-      const index = imageQuant.lookupRGB(
-        this.currentFramePixelsData[j++] & 0xff,
-        this.currentFramePixelsData[j++] & 0xff,
-        this.currentFramePixelsData[j++] & 0xff
-      )
+      worker.postMessage({
+        pixels: this.currentFramePixelsData,
+        quality: this.quality,
+        pixelCount
+      })
 
-      this.indexedPixels[i] = index
-    }
+      worker.addEventListener('message', event => {
+        const { colorTable, indexedPixels } = <{
+          colorTable: number[]
+          indexedPixels: Uint8Array
+        }> event.data
 
-    // Reset data.
-    this.currentFramePixelsData = null
+        // Get color table.
+        this.colorTable = colorTable
 
-    // TODO: Add transparent color support sometime.
+        // Get indexed pixels.
+        this.indexedPixels = indexedPixels
+
+        // Reset data.
+        this.currentFramePixelsData = null
+
+        resolve()
+
+        // TODO: Add transparent color support sometime.
+      })
+    })
   }
 
   /**
@@ -238,8 +251,8 @@ class Gif {
    * @memberof Gif
    */
   private writeGraphicsControlExtension () {
-    this.writeByte(0x21)    // 1: Extension Introducer. Always be 0x21.
-    this.writeByte(0xF9)  // 2: Graphics Control Label. Always be F9.
+    this.writeByte(0x21)  // 1: Extension Introducer. Always be 0x21.
+    this.writeByte(0xF9)  // 2: Graphics Control Label. Always be 0xF9.
     this.writeByte(4)     // 3: Byte size, this extension is a 4-byte extension.
 
     // Packet field.
@@ -312,9 +325,23 @@ class Gif {
    * @private
    * @memberof Gif
    */
-  private writeImagePixels () {
-    const encoder = new LZWEncoder(this.width, this.height, this.indexedPixels, this.colorDepth)
-    encoder.encode(this.gifRawBytes)
+  private writeImagePixels (): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const worker: Worker = new LZWEncoderWorker()
+
+      worker.postMessage({
+        width: this.width,
+        height: this.height,
+        pixels: this.indexedPixels,
+        colorDepth: this.colorDepth,
+        gifRawBytes: this.gifRawBytes.data
+      })
+
+      worker.addEventListener('message', event => {
+        this.gifRawBytes.data = <number[]> event.data
+        resolve()
+      })
+    })
   }
 
   constructor (options: IGifOptions) {
@@ -358,10 +385,14 @@ class Gif {
   /**
    * Add new frame.
    *
+   * @async
    * @param {(CanvasRenderingContext2D | ImageData)} data
    * @memberof Gif
    */
-  addFrame (data: CanvasRenderingContext2D | ImageData) {
+  async addFrame (data: CanvasRenderingContext2D | ImageData) {
+    if (!this.canAddNewFrame) { return }
+    this.canAddNewFrame = false
+
     // Prepare ImageData.
     let imageData: ImageData = null
     if (typeof data['getImageData'] === 'function') {
@@ -390,7 +421,7 @@ class Gif {
     }
 
     // Use NeuQuant to analyse current frame colors and creates color map.
-    this.analyseColor()
+    await this.analyseColor()
 
     // Do first frame jobs if necessary.
     if (this.isFirstFrame) {
@@ -413,8 +444,11 @@ class Gif {
       this.writePalette()
     }
 
-    this.writeImagePixels()  // Write image pixels data that following image descriptor.
+    // Write image pixels data that following image descriptor.
+    await this.writeImagePixels()
+
     this.isFirstFrame = false
+    this.canAddNewFrame = true
   }
 
   /**
@@ -423,8 +457,17 @@ class Gif {
    *
    * @memberof Gif
    */
-  finish (): Uint8Array {
+  finish () {
     this.writeByte(0x3B)
+  }
+
+  /**
+   * Get gif binary data.
+   *
+   * @returns {Uint8Array}
+   * @memberof Gif
+   */
+  getBinaryData (): Uint8Array {
     return this.gifRawBytes.getBinaryData()
   }
 }
