@@ -23,6 +23,9 @@ addEventListener('message', event => {
     )
 
     indexedPixels[i] = index
+
+    // Skip useless bit that created in gif.js line 425.
+    j++
   }
 
   postMessage({

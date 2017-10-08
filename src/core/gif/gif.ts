@@ -406,19 +406,32 @@ class Gif {
     const imageDataInBytes = imageData.data
 
     // Extracts ImageData to pixel byte array in BGR order.
+    // Only RGB data, no Alpha.
     const width = this.width
     const height = this.height
-    this.currentFramePixelsData = new Uint8Array(width * height * 3)
 
-    let count = 0
-    for (let i = 0; i < height; i++) {
-      for (let j = 0; j < width; j++) {
-        const b = (i * width * 4) + j * 4
-        this.currentFramePixelsData[count++] = imageDataInBytes[b]      // B.
-        this.currentFramePixelsData[count++] = imageDataInBytes[b + 1]  // G.
-        this.currentFramePixelsData[count++] = imageDataInBytes[b + 2]  // R.
+    // Create Uint32[] to use bit calc to increase performance.
+    const pixelsDataBuffer = new ArrayBuffer(width * height * 4)
+    const framePixelsDataIn32 = new Uint32Array(pixelsDataBuffer)
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const indexFor32 = y * width + x
+        const b = indexFor32 * 4
+
+        framePixelsDataIn32[indexFor32] =
+          // 0 is an useless bit, just to fill Uint32Array.
+          // Will be filtered in NeuQuant.
+          0 << 24 |
+          imageDataInBytes[b + 2] << 16 |   // R
+          imageDataInBytes[b + 1] << 8 |    // G
+          imageDataInBytes[b]               // B
       }
     }
+
+    // Get Uint8[] from pixelsDataBuffer.
+    const framePixelsDataIn8 = new Uint8Array(pixelsDataBuffer)
+    this.currentFramePixelsData = framePixelsDataIn8
 
     // Use NeuQuant to analyse current frame colors and creates color map.
     await this.analyseColor()
