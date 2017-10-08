@@ -193,26 +193,26 @@ class NeuQuant {
    * @memberof NeuQuant
    */
   private inxbuild () {
-    let j
-    let p
-    let q
-    let smallpos
-    let smallval
+    let j = 0
+    let p = []
+    let q = []
+    let smallpos = 0
+    let smallval = 0
     let previouscol = 0
-    let startpos = 0;
+    let startpos = 0
     for (let i = 0; i < netsize; i++) {
-      p = this.network[i];
-      smallpos = i;
-      smallval = p[1]; // index on g
+      p = this.network[i]
+      smallpos = i
+      smallval = p[1] // index on g
       // find smallest in i..netsize-1
       for (j = i + 1; j < netsize; j++) {
-        q = this.network[j];
+        q = this.network[j]
         if (q[1] < smallval) { // index on g
-          smallpos = j;
-          smallval = q[1]; // index on g
+          smallpos = j
+          smallval = q[1] // index on g
         }
       }
-      q = this.network[smallpos];
+      q = this.network[smallpos]
       // swap p (i) and q (smallpos) entries
       if (i != smallpos) {
         j = q[0];   q[0] = p[0];   p[0] = j;
@@ -223,7 +223,7 @@ class NeuQuant {
       // smallval entry is now in position i
 
       if (smallval != previouscol) {
-        this.netindex[previouscol] = (startpos + i) >> 1;
+        this.netindex[previouscol] = (startpos + i) >> 1
         for (j = previouscol + 1; j < smallval; j++) {
           this.netindex[j] = i
         }
@@ -235,7 +235,7 @@ class NeuQuant {
     this.netindex[previouscol] = (startpos + maxnetpos) >> 1;
 
     for (let j = previouscol + 1; j < 256; j++) {
-      this.netindex[j] = maxnetpos; // really 256
+      this.netindex[j] = maxnetpos // really 256
     }
   }
 
@@ -251,9 +251,9 @@ class NeuQuant {
    * @memberof NeuQuant
    */
   private altersingle (alpha, i, b, g, r) {
-    this.network[i][0] -= (alpha * (this.network[i][0] - b)) / initalpha;
-    this.network[i][1] -= (alpha * (this.network[i][1] - g)) / initalpha;
-    this.network[i][2] -= (alpha * (this.network[i][2] - r)) / initalpha;
+    this.network[i][0] -= (alpha * (this.network[i][0] - b)) / initalpha
+    this.network[i][1] -= (alpha * (this.network[i][1] - g)) / initalpha
+    this.network[i][2] -= (alpha * (this.network[i][2] - r)) / initalpha
   }
 
   /**
@@ -275,29 +275,24 @@ class NeuQuant {
     let bestd = ~(1 << 31)
     let bestbiasd = bestd
     let bestpos = -1
-    let bestbiaspos = bestpos;
+    let bestbiaspos = bestpos
 
-    let i
-    let n
-    let dist
-    let biasdist
-    let betafreq
-    for (i = 0; i < netsize; i++) {
-      n = this.network[i];
+    for (let i = 0; i < netsize; i++) {
+      let n = this.network[i];
+      const dist = Math.abs(n[0] - b) + Math.abs(n[1] - g) + Math.abs(n[2] - r)
 
-      dist = Math.abs(n[0] - b) + Math.abs(n[1] - g) + Math.abs(n[2] - r);
       if (dist < bestd) {
-        bestd = dist;
-        bestpos = i;
+        bestd = dist
+        bestpos = i
       }
 
-      biasdist = dist - ((this.bias[i]) >> (intbiasshift - netbiasshift));
+      const biasdist = dist - ((this.bias[i]) >> (intbiasshift - netbiasshift))
       if (biasdist < bestbiasd) {
-        bestbiasd = biasdist;
-        bestbiaspos = i;
+        bestbiasd = biasdist
+        bestbiaspos = i
       }
 
-      betafreq = (this.freq[i] >> betashift);
+      const betafreq = (this.freq[i] >> betashift);
       this.freq[i] -= betafreq;
       this.bias[i] += (betafreq << gammashift);
     }
@@ -305,7 +300,7 @@ class NeuQuant {
     this.freq[bestpos] += beta;
     this.bias[bestpos] -= betagamma;
 
-    return bestbiaspos;
+    return bestbiaspos
   }
 
   /**
@@ -320,30 +315,31 @@ class NeuQuant {
    * @memberof NeuQuant
    */
   private alterneigh (radius, i, b, g, r) {
-    const lo = Math.abs(i - radius);
-    const hi = Math.min(i + radius, netsize);
+    const lo = Math.abs(i - radius)
+    const hi = Math.min(i + radius, netsize)
 
     let j = i + 1
     let k = i - 1
     let m = 1
 
-    let p
-    let a
+    let p = []
+    let a = 0
+
     while ((j < hi) || (k > lo)) {
-      a = this.radpower[m++];
+      a = this.radpower[m++]
 
       if (j < hi) {
-        p = this.network[j++];
-        p[0] -= (a * (p[0] - b)) / alpharadbias;
-        p[1] -= (a * (p[1] - g)) / alpharadbias;
-        p[2] -= (a * (p[2] - r)) / alpharadbias;
+        p = this.network[j++]
+        p[0] -= (a * (p[0] - b)) / alpharadbias
+        p[1] -= (a * (p[1] - g)) / alpharadbias
+        p[2] -= (a * (p[2] - r)) / alpharadbias
       }
 
       if (k > lo) {
-        p = this.network[k--];
-        p[0] -= (a * (p[0] - b)) / alpharadbias;
-        p[1] -= (a * (p[1] - g)) / alpharadbias;
-        p[2] -= (a * (p[2] - r)) / alpharadbias;
+        p = this.network[k--]
+        p[0] -= (a * (p[0] - b)) / alpharadbias
+        p[1] -= (a * (p[1] - g)) / alpharadbias
+        p[2] -= (a * (p[2] - r)) / alpharadbias
       }
     }
   }
@@ -381,10 +377,10 @@ class NeuQuant {
 
     let k = 0
     for (let l = 0; l < netsize; l++) {
-      const j = index[l]
-      map[k++] = (this.network[j][0])
-      map[k++] = (this.network[j][1])
-      map[k++] = (this.network[j][2])
+      const data = this.network[index[l]]
+      map[k++] = data[0]
+      map[k++] = data[1]
+      map[k++] = data[2]
     }
 
     return map
@@ -446,7 +442,7 @@ class NeuQuant {
         if (dist >= bestd) {
           j = -1 // stop iter
         } else {
-          j--;
+          j--
           if (dist < 0) {
             dist = -dist
           }

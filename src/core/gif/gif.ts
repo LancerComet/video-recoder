@@ -410,6 +410,19 @@ class Gif {
     const width = this.width
     const height = this.height
 
+    // Original version.
+    // this.currentFramePixelsData = new Uint8Array(width * height * 3)
+
+    // let count = 0
+    // for (let i = 0; i < height; i++) {
+    //   for (let j = 0; j < width; j++) {
+    //     const b = (i * width * 4) + j * 4
+    //     this.currentFramePixelsData[count++] = imageDataInBytes[b]      // B.
+    //     this.currentFramePixelsData[count++] = imageDataInBytes[b + 1]  // G.
+    //     this.currentFramePixelsData[count++] = imageDataInBytes[b + 2]  // R.
+    //   }
+    // }
+
     // Create Uint32[] to use bit calc to increase performance.
     const pixelsDataBuffer = new ArrayBuffer(width * height * 4)
     const framePixelsDataIn32 = new Uint32Array(pixelsDataBuffer)
@@ -430,8 +443,7 @@ class Gif {
     }
 
     // Get Uint8[] from pixelsDataBuffer.
-    const framePixelsDataIn8 = new Uint8Array(pixelsDataBuffer)
-    this.currentFramePixelsData = framePixelsDataIn8
+    this.currentFramePixelsData = new Uint8Array(pixelsDataBuffer)
 
     // Use NeuQuant to analyse current frame colors and creates color map.
     await this.analyseColor()
