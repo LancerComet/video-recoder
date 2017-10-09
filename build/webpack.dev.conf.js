@@ -3,6 +3,7 @@ const webpack = require('webpack')
 const merge = require('webpack-merge')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const FriendlyErrorsPlugin = require('friendly-errors-webpack-plugin')
+const OptimizeJsPlugin = require('optimize-js-plugin')
 
 const utils = require('./utils/utils')
 const config = require('../config')
@@ -29,6 +30,10 @@ module.exports = merge(baseWebpackConfig, {
     new webpack.HotModuleReplacementPlugin(),
 
     new webpack.NoEmitOnErrorsPlugin(),
+
+    new OptimizeJsPlugin({
+      sourceMap: true
+    }),
 
     new HtmlWebpackPlugin({
       filename: 'index.html',

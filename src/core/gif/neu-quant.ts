@@ -65,7 +65,7 @@ class NeuQuant {
   private pixels: any
   private samplefac: any
 
-  private network: any = []  // int[netsize][4]
+  private network: Array<Float64Array> = []  // int[netsize][4]
   private netindex = new Int32Array(256)  // for network lookup - really 256
 
   // bias and freq arrays for learning
@@ -74,13 +74,13 @@ class NeuQuant {
   private radpower = new Int32Array(netsize >> 3)
 
   private init () {
-    let v
+    let v = 0
     for (let i = 0; i < netsize; i++) {
-      v = (i << (netbiasshift + 8)) / netsize;
-      this.network[i] = new Float64Array([v, v, v, 0]);
+      v = (i << (netbiasshift + 8)) / netsize
+      this.network[i] = new Float64Array([v, v, v, 0])
       // network[i] = [v, v, v, 0]
-      this.freq[i] = intbias / netsize;
-      this.bias[i] = 0;
+      this.freq[i] = intbias / netsize
+      this.bias[i] = 0
     }
   }
 
@@ -126,10 +126,10 @@ class NeuQuant {
       step = 3 * prime4
     }
 
-    let b
-    let g
-    let r
-    let j
+    let b = 0
+    let g = 0
+    let r = 0
+    let j = 0
     let pix = 0  // current pixel
 
     i = 0;
@@ -260,12 +260,13 @@ class NeuQuant {
    * Searches for biased BGR values
    *
    * @private
-   * @param {any} b
-   * @param {any} g
-   * @param {any} r
+   * @param {number} b
+   * @param {number} g
+   * @param {number} r
+   * @returns {number}
    * @memberof NeuQuant
    */
-  private contest (b, g, r) {
+  private contest (b: number, g: number, r: number): number {
     /*
       finds closest neuron (min dist) and updates freq
       finds best neuron (min dist-bias) and returns position
@@ -278,7 +279,7 @@ class NeuQuant {
     let bestbiaspos = bestpos
 
     for (let i = 0; i < netsize; i++) {
-      let n = this.network[i];
+      let n: Float64Array = this.network[i]
       const dist = Math.abs(n[0] - b) + Math.abs(n[1] - g) + Math.abs(n[2] - r)
 
       if (dist < bestd) {
@@ -367,20 +368,20 @@ class NeuQuant {
    *
    * @memberof NeuQuant
    */
-  getColormap () {
-    const map = []
-    const index = []
+  getColormap (): number[] {
+    const map: number[] = []
+    const index: number[] = []
 
     for (let i = 0; i < netsize; i++) {
       index[this.network[i][3]] = i
     }
 
-    let k = 0
-    for (let l = 0; l < netsize; l++) {
-      const data = this.network[index[l]]
-      map[k++] = data[0]
-      map[k++] = data[1]
-      map[k++] = data[2]
+    let j = 0
+    for (let k = 0; k < netsize; k++) {
+      const data: Float64Array = this.network[index[k]]
+      map[j++] = data[0]
+      map[j++] = data[1]
+      map[j++] = data[2]
     }
 
     return map
@@ -390,15 +391,16 @@ class NeuQuant {
    * Searches for BGR values 0..255 and returns a color index
    * looks for the closest *r*, *g*, *b* color in the map and returns its index
    *
-   * @param {any} b
-   * @param {any} g
-   * @param {any} r
+   * @param {number} b
+   * @param {number} g
+   * @param {number} r
+   * @returns {number}
    * @memberof NeuQuant
    */
-  lookupRGB (b, g, r) {
-    let a
-    let p
-    let dist
+  lookupRGB (b: number, g: number, r: number): number {
+    let a = 0
+    let p: Float64Array = null
+    let dist = 0
 
     let bestd = 1000  // biggest possible dist is 256*3
     let best = -1
@@ -408,7 +410,7 @@ class NeuQuant {
 
     while ((i < netsize) || (j >= 0)) {
       if (i < netsize) {
-        p = this.network[i];
+        p = this.network[i]
         dist = p[1] - g; // inx key
         if (dist >= bestd) {
           i = netsize // stop iter
