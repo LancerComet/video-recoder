@@ -4,6 +4,35 @@
  * @interface IRecoderOptions
  */
 interface IRecoderOptions {
-  canvasElement: HTMLCanvasElement
-  delay: number
+  /**
+   * Image width.
+   *
+   * @type {number}
+   * @memberof IRecoderOptions
+   */
+  width: number
+
+  /**
+   * image height.
+   *
+   * @type {number}
+   * @memberof IRecoderOptions
+   */
+  height: number
+
+  /**
+   * Target fps.
+   *
+   * @type {number}
+   * @memberof IRecoderOptions
+   */
+  fps: number
+
+  /**
+   * Video element, source of video.
+   *
+   * @type {HTMLVideoElement}
+   * @memberof IRecoderOptions
+   */
+  videoElement: HTMLVideoElement
 }

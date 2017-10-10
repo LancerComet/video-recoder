@@ -280,7 +280,7 @@ class Gif {
     )
 
     // Delay time.
-    this.writeShort(this.delay)
+    this.writeShort(this.delay)  // 10 equals to 0.1s.
 
     // Transparent Color Index.
     this.writeByte(this.transparentColorIndex)
@@ -355,7 +355,7 @@ class Gif {
     this.width = ~~options.width
     this.height = ~~options.height
 
-    // Set fps.
+    // Set delay.
     isNumber(options.delay) && this.setDelay(options.delay)
 
     // Set quality.
@@ -366,11 +366,6 @@ class Gif {
     // Set repeat.
     if (isNumber(options.repeat)) {
       this.repeat = options.repeat
-    }
-
-    // Set delay.
-    if (isNumber(options.delay)) {
-      this.delay = options.delay
     }
 
     // Set disposal methods code.

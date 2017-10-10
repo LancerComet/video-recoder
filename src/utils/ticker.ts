@@ -1,3 +1,5 @@
+const MAX_FRAMES_PER_SECONDS = 60
+
 /**
  * Run requestAnimationFrame in limited frame rate.
  *
@@ -31,7 +33,7 @@ class Ticker {
 
   private tick () {
     if (this.i > 0) {
-      this.i -= 16.6667
+      this.i -= 1000 / MAX_FRAMES_PER_SECONDS
     } else {
       this.callback()
       this.i = this.fpsInterval
