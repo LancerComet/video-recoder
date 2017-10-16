@@ -208,8 +208,6 @@ class Gif {
 
   /**
    * Write global / local color table data.
-   * Will write global color table if is first frame.
-   * Otherwise local color table.
    *
    * @private
    * @memberof Gif
@@ -380,6 +378,9 @@ class Gif {
 
     // Write file head.
     this.writeString('GIF89a')
+
+    // Add logical screen discriptor information.
+    this.writeLSD()
   }
 
   /**
@@ -427,19 +428,15 @@ class Gif {
     const pixelsDataBuffer = new ArrayBuffer(width * height * 4)
     const framePixelsDataIn32 = new Uint32Array(pixelsDataBuffer)
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const indexFor32 = y * width + x
-        const b = indexFor32 * 4
+    let b = 0  // 0, 4, 8, 12, 16, ...
+    for (let i = 0, length = framePixelsDataIn32.length; i < length; i++) {
+      framePixelsDataIn32[i] =
+        0 << 24 |
+        imageDataInBytes[b + 2] << 16 |
+        imageDataInBytes[b + 1] << 8 |
+        imageDataInBytes[b]
 
-        framePixelsDataIn32[indexFor32] =
-          // 0 is an useless bit, just to fill Uint32Array.
-          // Will be filtered in NeuQuant.
-          0 << 24 |
-          imageDataInBytes[b + 2] << 16 |   // R
-          imageDataInBytes[b + 1] << 8 |    // G
-          imageDataInBytes[b]               // B
-      }
+      b += 4
     }
 
     // Get Uint8[] from pixelsDataBuffer.
@@ -450,8 +447,11 @@ class Gif {
 
     // Do first frame jobs if necessary.
     if (this.isFirstFrame) {
-      this.writeLSD()  // Add logical screen discriptor information.
-      this.writePalette()  // Add global color table.
+      // Add global color table.
+      // TODO:
+      //   This is not a real global color table so far, this is just a color table
+      //   that analyzed from first frame and placed in global color table's position.
+      this.writePalette()
 
       // Add repeat information.
       if (this.repeat >= 0) {
@@ -465,6 +465,7 @@ class Gif {
     // Write image descriptor.
     this.writeImageDescriptor()
 
+    // Add local color table for non-first frame.
     if (!this.isFirstFrame) {
       this.writePalette()
     }
