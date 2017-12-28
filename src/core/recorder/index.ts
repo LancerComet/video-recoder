@@ -3,14 +3,105 @@
 import { Ticker } from '../../utils/ticker'
 import { Gif } from '../gif/gif'
 import { download } from '../download'
+import { isNumber } from '../../utils/is-number'
+
+const DEFAULT_WIDTH = 480
+const DEFAULT_HEIGHT = 272
+const DEFAULT_FPS = 15
+const MILLISECONDS_PER_SECOND = 1000
 
 class Recorder {
-  private delay: number = 150
-  private inRecording: boolean = false
+  /**
+   * Target image width.
+   *
+   * @private
+   * @type {number}
+   * @memberof Recorder
+   */
+  private width: number = DEFAULT_WIDTH
+
+  /**
+   * Target image height.
+   *
+   * @private
+   * @type {number}
+   * @memberof Recorder
+   */
+  private height: number = DEFAULT_HEIGHT
+
+  /**
+   * FPS setting for video playback and gif.
+   *
+   * @private
+   * @type {number}
+   * @memberof Recorder
+   */
+  private fps: number = DEFAULT_FPS
+
+  /**
+   * Time between each frames.
+   * Calculated from fps.
+   *
+   * @private
+   * @type {number}
+   * @memberof Recorder
+   */
+  private delay: number = null
+
+  /**
+   * Canvas element for rendering gif,
+   *
+   * @private
+   * @type {HTMLCanvasElement}
+   * @memberof Recorder
+   */
   private canvas: HTMLCanvasElement
+
+  /**
+   * Context from canvas.
+   *
+   * @private
+   * @type {CanvasRenderingContext2D}
+   * @memberof Recorder
+   */
   private context: CanvasRenderingContext2D
+
+  /**
+   * Video element that plays target video.
+   *
+   * @private
+   * @type {HTMLVideoElement}
+   * @memberof Recorder
+   */
+  private videoElement: HTMLVideoElement
+
+  /**
+   * Gif class object.
+   * This is what you want.
+   *
+   * @private
+   * @type {Gif}
+   * @memberof Recorder
+   */
   private gif: Gif
+
+  /**
+   * Recorded image data.
+   *
+   * @private
+   * @type {ImageData[]}
+   * @memberof Recorder
+   */
   private recordedData: ImageData[] = []
+
+  /**
+   * If is in recording.
+   *
+   * @private
+   * @type {boolean}
+   * @memberof Recorder
+   */
+  private inRecording: boolean = false
 
   /**
    * Ticker object.
@@ -21,6 +112,36 @@ class Recorder {
    * @memberof Recorder
    */
   private ticker: Ticker
+
+  /**
+   * Initialize canvas.
+   *
+   * @private
+   * @memberof Recorder
+   */
+  private initCanvas () {
+    const canvas = document.createElement('canvas')
+    canvas.width = this.width
+    canvas.height = this.height
+
+    const context = canvas.getContext('2d')
+
+    this.canvas = canvas
+    this.context = context
+  }
+
+  /**
+   * Transfer video playback to canvas.
+   *
+   * @private
+   * @memberof Recorder
+   */
+  private playVideoInCanvas () {
+    const ticker = new Ticker(this.fps, () => {
+      this.context.drawImage(this.videoElement, 0, 0, this.width, this.height)
+    })
+    ticker.start()
+  }
 
   /**
    * Event handlers.
@@ -113,7 +234,7 @@ class Recorder {
       this.gif = gif
 
       // Create a new ticker to capture images in target frame rate.
-      const ticker = new Ticker(this.delay, () => this.recordExec())
+      const ticker = new Ticker(this.fps, () => this.recordExec())
       ticker.start()
       this.ticker = ticker
 
@@ -151,15 +272,27 @@ class Recorder {
   }
 
   constructor (options: IRecoderOptions) {
-    if (typeof options.delay === 'number') {
-      this.delay = options.delay
+    if (isNumber(options.fps)) {
+      this.fps = options.fps
     }
 
-    if (Object.prototype.toString.call(options.canvasElement) === '[object HTMLCanvasElement]') {
-      this.canvas = options.canvasElement
+    // Transform fps to delay.
+    this.delay = MILLISECONDS_PER_SECOND / this.fps
+
+    if (isNumber(options.width)) {
+      this.width = options.width
     }
 
-    this.context = this.canvas.getContext('2d')
+    if (isNumber(options.height)) {
+      this.height = options.height
+    }
+
+    if (typeof options.videoElement !== 'undefined') {
+      this.videoElement = options.videoElement
+    }
+
+    this.initCanvas()
+    this.playVideoInCanvas()
   }
 }
 

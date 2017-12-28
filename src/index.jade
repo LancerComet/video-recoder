@@ -17,7 +17,6 @@ html
   body
     div(style="position: relative")
       h2 GIF Recording
-      canvas(id="app-canvas" width="853" height="480" style="background-color: #000")
 
     div
       h4 Click "Start Record" to start record and then click "Stop Record" to generate gif.
@@ -31,7 +30,7 @@ html
         progress
         span Encoding, please wait ...
 
-    video#app-video(src="/demo.mp4" controls="controls" style="display: none" autoplay="autoplay" loop="loop")
+    video#app-video(src="/demo.mp4" controls="controls" autoplay="autoplay" loop="loop")
 
     //- Would turn it on if it was set to false.
     if INJECT === false
