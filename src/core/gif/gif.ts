@@ -1,3 +1,15 @@
+/*
+ * Gif class.
+ *
+ * Code reference:
+ * https://github.com/jnordberg/gif.js
+ *
+ * Format spec reference:
+ * http://www.onicos.com/staff/iz/formats/gif.html
+ * http://www.matthewflickinger.com/lab/whatsinagif/bits_and_bytes.asp
+ * http://www.blogjava.net/georgehill/articles/6550.html
+ */
+
 import { isNumber } from '../../utils/is-number'
 import { ByteArray } from './byte-array'
 
@@ -6,10 +18,6 @@ import * as NeuQuantWorker from 'worker-loader?inline!./neu-quant.worker'
 
 /**
  * Gif class definition.
- * Format spec reference:
- * http://www.onicos.com/staff/iz/formats/gif.html
- * http://www.matthewflickinger.com/lab/whatsinagif/bits_and_bytes.asp
- * http://www.blogjava.net/georgehill/articles/6550.html
  *
  * @class Gif
  */
